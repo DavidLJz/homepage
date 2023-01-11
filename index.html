@@ -1,14 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>HOME</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <style></style>
+    <style>
+        #bday, #life-spent, #life-left, #reset { display: none; }
+    </style>
 </head>
 
 <body>
+    <h1>MEMENTO MORI</h1>
+
+    <div id="bday">
+        <input type="date" value=""  />
+        <button type="button">Submit</button>
+    </div>
+
     <div id="life-spent">
         <p>
             You have lived <span class="years"></span> years, <span class="months-minus-years"></span> months and <span class="days-minus-months"></span> days
@@ -37,76 +46,140 @@
         <div><span class="years"></span> years</div>
     </div>
 
+    <div id="reset">
+        <p>Press the button below to reset your birth day and input a new one</p>
+        <button type="button">Reset</button>
+    </div>
 </body>
 
 <script>
     // this file was created on Monday, January 9, 2023, 9:21:25 PM
 
-    // get a variable with birth day 3rd of May of 1998
-    const birth = new Date(1998, 4, 3);
-
-    const units = {
-        'secs': 1,
-        'mins': 60,
-        'hrs': 3600,
-        'days': 86400,
-        'weeks': 604800,
-        'months': 2628000,
-        'years': 31536000
-    }
-
-    const calc_time = () => {
-        const life = { 
-            'spent': { 'ms': 0 }, 
-            'left': { 'ms':0 }
+    const mementomori = birth => {
+        const units = {
+            'secs': 1,
+            'mins': 60,
+            'hrs': 3600,
+            'days': 86400,
+            'weeks': 604800,
+            'months': 2628000,
+            'years': 31536000
         }
 
-        const now = Date.now()
-        
-        // 60 years from birth = birth + 60 years
-        const ms_left = birth.getTime() + ( 31536000 * 60 ) * 1000
-
-        life.spent.ms = now - birth
-        life.left.ms = new Date( ms_left ) - now
-
-        for ( const i in life ) {
-            for (const unit in units) {
-                const unit_val = units[ unit ]
-
-                const s = life[i].ms / 1000
-
-                life[i][ unit ] = Math.floor(s / unit_val)
+        const calc_time = () => {
+            const life = { 
+                'spent': { 'ms': 0 }, 
+                'left': { 'ms':0 }
             }
+
+            const now = Date.now()
+            
+            // 60 years from birth = birth + 60 years
+            const ms_left = birth.getTime() + ( 31536000 * 60 ) * 1000
+
+            life.spent.ms = now - birth
+            life.left.ms = new Date( ms_left ) - now
+
+            for ( const i in life ) {
+                for (const unit in units) {
+                    const unit_val = units[ unit ]
+
+                    const s = life[i].ms / 1000
+
+                    life[i][ unit ] = Math.floor(s / unit_val)
+                }
+            }
+
+            return life
         }
+        
+        const render = () => {
+            console.log('rendering...')
 
-        return life
-    }
-    
-    const render = () => {
-        const life = calc_time()
+            const life = calc_time()
 
-        for ( const i in life ) {
-            for (const unit in units) {
-                document.querySelectorAll(`#life-${i} .${unit}`).forEach(e => {
-                    e.innerHTML = life[i][ unit ].toLocaleString()
+            for ( const i in life ) {
+                for (const unit in units) {
+                    document.querySelectorAll(`#life-${i} .${unit}`).forEach(e => {
+                        e.innerHTML = life[i][ unit ].toLocaleString()
+                    })
+                }
+
+                document.querySelectorAll(`#life-${i} .months-minus-years`).forEach(e => {
+                    e.innerText = life[i].months - ( life[i].years * 12 )
+                })
+
+                document.querySelectorAll(`#life-${i} .days-minus-months`).forEach(e => {
+                    e.innerText = life[i].days - ( life[i].months * 30 )
                 })
             }
-
-            document.querySelectorAll(`#life-${i} .months-minus-years`).forEach(e => {
-                e.innerText = life[i].months - ( life[i].years * 12 )
-            })
-
-            document.querySelectorAll(`#life-${i} .days-minus-months`).forEach(e => {
-                e.innerText = life[i].days - ( life[i].months * 30 )
-            })
         }
+
+        render()
+
+        const interval_id = setInterval(() => { render() }, 1000 * 5)
+
+        return interval_id
     }
 
-    render()
+    let stored_bday = localStorage.getItem('bday')
 
-    setInterval(() => {
-        render()
-    }, 1000 * 60);
+    if ( stored_bday ) {
+        stored_bday = new Date( stored_bday )
+    }
+
+    const bday_div = document.getElementById('bday')
+
+    bday_div.querySelector('input').setAttribute('max', new Date().toISOString().split('T')[0])
+    bday_div.querySelector('input').setAttribute('min', new Date(1970, 0, 1).toISOString().split('T')[0])
+
+    const life_spent = document.getElementById('life-spent')
+    const life_left = document.getElementById('life-left')
+    const reset = document.getElementById('reset')
+
+    let interval_id = null
+
+    if ( stored_bday ) {
+        bday_div.style.display = 'none'
+        life_spent.style.display = 'block'
+        life_left.style.display = 'block'
+        reset.style.display = 'block'
+
+        interval_id = mementomori( stored_bday )
+    } else {
+        bday_div.style.display = 'block'
+
+        bday_div.querySelector('button').addEventListener('click', () => {
+            const birth_str = bday_div.querySelector('input').value
+
+            if ( !birth_str ) {
+                return
+            }
+
+            const birth = new Date( birth_str )
+
+            localStorage.setItem('bday', birth.toJSON())
+
+            bday_div.style.display = 'none'
+            life_spent.style.display = 'block'
+            life_left.style.display = 'block'
+            reset.style.display = 'block'
+
+            interval_id = mementomori( birth )
+        })
+    }
+
+    reset.querySelector('button').addEventListener('click', e => {
+        localStorage.removeItem('bday')
+
+        bday_div.style.display = 'block'
+        life_spent.style.display = 'none'
+        life_left.style.display = 'none'
+
+        if ( interval_id ) {
+            clearInterval( interval_id )
+        }
+    })
 </script>
 
 </html>
